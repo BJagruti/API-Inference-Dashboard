@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · Defect Inspection</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e5e7eb;
+          --accent:#2563eb; --ok:#059669; --bad:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI, system-ui, Arial, sans-serif; background:var(--bg); color:var(--text); }
+  header { background:#111827; color:#fff; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+  header h1 { font-size:18px; margin:0; font-weight:600; }
+  header a.btn { color:#fff; text-decoration:none; border:1px solid #374151; border-radius:6px; padding:6px 12px; font-size:14px; }
+  header a.btn:hover { background:#1f2937; }
+  main { max-width:1000px; margin:20px auto; padding:0 16px; display:grid; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
+  h2 { font-size:16px; margin:0 0 4px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .profiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:12px; margin-top:12px; }
+  .pcard { border:1px solid var(--line); border-radius:10px; padding:14px; display:grid; gap:6px; }
+  .pcard.active { border-color:var(--accent); box-shadow:0 0 0 2px #dbeafe; }
+  .pcard .top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .pcard .name { font-weight:600; font-size:16px; }
+  .pill { font-size:12px; padding:2px 10px; border-radius:999px; background:#dbeafe; color:var(--accent); font-weight:600; }
+  .kv { font-size:13px; color:var(--muted); word-break:break-all; }
+  .kv b { color:var(--text); font-weight:500; }
+  .actions { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+  button { border:0; border-radius:7px; padding:8px 14px; font-size:14px; cursor:pointer; }
+  .primary { background:var(--accent); color:#fff; }
+  .secondary { background:#eef2ff; color:#3730a3; }
+  .ghost { background:#f3f4f6; color:var(--text); }
+  .danger { background:#fee2e2; color:var(--bad); }
+  button:disabled { opacity:.6; cursor:wait; }
+  form { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-top:12px; }
+  .field { display:grid; gap:5px; }
+  .field.full { grid-column:1 / -1; }
+  .field label { font-size:13px; font-weight:600; }
+  .field input { padding:9px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:14px; width:100%; }
+  .field input:focus { outline:2px solid #bfdbfe; border-color:var(--accent); }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row input[type=range] { flex:1; }
+  .hint { font-size:12px; color:var(--muted); }
+  .formactions { grid-column:1 / -1; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .msg { font-size:14px; padding:10px 12px; border-radius:8px; grid-column:1 / -1; }
+  .msg.ok { background:#d1fae5; color:#065f46; }
+  .msg.err { background:#fee2e2; color:#991b1b; }
+  .msg.info { background:#eff6ff; color:#1e40af; }
+  .preview { grid-column:1 / -1; background:#111827; color:#fff; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+  .preview .t { font-weight:600; }
+  .preview .m { font-size:12px; color:#9ca3af; }
+  @media (max-width:700px) { form { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚙ Settings</h1>
+  <a class="btn" href="/ui">← Back to inspection</a>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Profiles</h2>
+    <div class="muted">Each profile is one product/model (e.g. Fabric, Shoe). The active profile is used for all detections.</div>
+    <div class="profiles" id="profiles"></div>
+  </section>
+
+  <section class="card">
+    <h2 id="formTitle">Add new profile</h2>
+    <div class="muted">Find models on <a href="https://universe.roboflow.com" target="_blank">Roboflow Universe</a> or in your own Roboflow workspace (Deploy → Model ID). Get the API key from <a href="https://app.roboflow.com" target="_blank">app.roboflow.com</a> → Settings → API Keys.</div>
+    <form id="form" autocomplete="off">
+      <input type="hidden" id="pid">
+      <div class="field full">
+        <label for="model_id">Roboflow Model ID *</label>
+        <input id="model_id" placeholder="e.g. yolo-fabric-defect-detector/1" required>
+        <span class="hint">Format: project-name/version. The name and title below fill in automatically.</span>
+      </div>
+      <div class="field">
+        <label for="name">Display name</label>
+        <input id="name" placeholder="e.g. Fabric, Shoe">
+        <span class="hint">Auto-filled from the model ID — you can change it.</span>
+      </div>
+      <div class="field">
+        <label for="title">Page title</label>
+        <input id="title" placeholder="e.g. Shoe Defect Inspection">
+      </div>
+      <div class="field">
+        <label for="api_key">Roboflow API key</label>
+        <div class="row">
+          <input id="api_key" type="password" placeholder="Paste API key">
+          <button type="button" class="ghost" id="showKey">Show</button>
+        </div>
+        <span class="hint" id="keyHint">New profile: leave blank to reuse the active profile's key.</span>
+      </div>
+      <div class="field">
+        <label for="confidence">Default confidence</label>
+        <div class="row">
+          <input id="confidence" type="range" min="0.05" max="0.95" step="0.05" value="0.4">
+          <b id="confVal">40%</b>
+        </div>
+        <span class="hint">Detections below this are hidden.</span>
+      </div>
+      <div class="field full">
+        <label for="api_url">API URL (advanced)</label>
+        <input id="api_url" placeholder="https://serverless.roboflow.com">
+        <span class="hint">Leave as default unless you run your own Roboflow inference server.</span>
+      </div>
+      <div class="preview"><div><div class="t" id="pvTitle">Defect Inspection</div><div class="m" id="pvModel">Model: —</div></div><span class="muted" style="color:#9ca3af">Header preview</span></div>
+      <div class="formactions">
+        <button type="button" class="secondary" id="testBtn">Test connection</button>
+        <button type="submit" class="ghost" id="saveBtn">Save</button>
+        <button type="button" class="primary" id="saveActBtn">Save &amp; use this profile</button>
+        <button type="button" class="ghost" id="resetBtn">Clear form</button>
+      </div>
+      <div class="msg" id="msg" hidden></div>
+    </form>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let profiles = [];
+let nameTouched = false, titleTouched = false;
+
+const showConf = () => $("confVal").textContent = Math.round($("confidence").value * 100) + "%";
+$("confidence").oninput = showConf;
+$("showKey").onclick = () => {
+  const k = $("api_key"); k.type = k.type === "password" ? "text" : "password";
+  $("showKey").textContent = k.type === "password" ? "Show" : "Hide";
+};
+
+function msg(text, kind) { const m = $("msg"); m.hidden = !text; m.className = "msg " + (kind || "info"); m.innerHTML = text; }
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail || d));
+  return d;
+}
+const post = (url, body, method) => api(url, { method: method || "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+async function loadProfiles() {
+  const s = await api("/settings");
+  profiles = s.profiles;
+  $("profiles").innerHTML = profiles.map(p => `
+    <div class="pcard ${p.active ? "active" : ""}">
+      <div class="top"><span class="name">${esc(p.name)}</span>${p.active ? '<span class="pill">Active</span>' : ""}</div>
+      <div class="kv">Title: <b>${esc(p.title)}</b></div>
+      <div class="kv">Model: <b>${esc(p.model_id)}</b></div>
+      <div class="kv">API key: <b>${p.has_api_key ? esc(p.api_key_masked) : '<span style="color:#dc2626">not set</span>'}</b></div>
+      <div class="kv">Confidence: <b>${Math.round(p.confidence * 100)}%</b></div>
+      <div class="actions">
+        ${p.active ? "" : `<button class="primary" onclick="useProfile('${p.id}')">Use</button>`}
+        <button class="secondary" onclick="editProfile('${p.id}')">Edit</button>
+        <button class="ghost" onclick="testProfile('${p.id}', this)">Test</button>
+        ${profiles.length > 1 ? `<button class="danger" onclick="deleteProfile('${p.id}')">Delete</button>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+function updatePreview() {
+  $("pvTitle").textContent = $("title").value || ($("name").value ? $("name").value + " Defect Inspection" : "Defect Inspection");
+  $("pvModel").textContent = "Model: " + ($("model_id").value || "—");
+}
+
+let suggestTimer;
+$("model_id").addEventListener("input", () => {
+  updatePreview();
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(async () => {
+    const m = $("model_id").value.trim();
+    if (!m) return;
+    const s = await api("/settings/suggest-name?model_id=" + encodeURIComponent(m)).catch(() => null);
+    if (!s) return;
+    if (!nameTouched) $("name").value = s.name;
+    if (!titleTouched) $("title").value = s.title;
+    updatePreview();
+  }, 250);
+});
+$("name").addEventListener("input", () => {
+  nameTouched = true;
+  if (!titleTouched) $("title").value = $("name").value ? $("name").value + " Defect Inspection" : "";
+  updatePreview();
+});
+$("title").addEventListener("input", () => { titleTouched = true; updatePreview(); });
+
+function resetForm() {
+  $("form").reset(); $("pid").value = ""; nameTouched = titleTouched = false;
+  $("api_url").value = ""; $("confidence").value = 0.4; showConf();
+  $("formTitle").textContent = "Add new profile";
+  $("keyHint").textContent = "New profile: leave blank to reuse the active profile's key.";
+  msg(""); updatePreview();
+}
+$("resetBtn").onclick = resetForm;
+
+function editProfile(id) {
+  const p = profiles.find(x => x.id === id); if (!p) return;
+  $("pid").value = p.id; $("model_id").value = p.model_id; $("name").value = p.name; $("title").value = p.title;
+  $("api_key").value = ""; $("api_url").value = p.api_url; $("confidence").value = p.confidence; showConf();
+  nameTouched = titleTouched = true;
+  $("formTitle").textContent = "Edit profile: " + p.name;
+  $("keyHint").textContent = p.has_api_key ? "Current key: " + p.api_key_masked + " — leave blank to keep it." : "No key saved yet.";
+  msg(""); updatePreview();
+  $("form").scrollIntoView({ behavior: "smooth" });
+}
+
+function formData(activate) {
+  return { id: $("pid").value || null, model_id: $("model_id").value.trim(), name: $("name").value.trim(),
+           title: $("title").value.trim(), api_key: $("api_key").value.trim(), api_url: $("api_url").value.trim(),
+           confidence: parseFloat($("confidence").value), activate: !!activate };
+}
+
+async function save(activate) {
+  const d = formData(activate);
+  if (!d.model_id) { msg("Model ID is required.", "err"); return; }
+  try {
+    const r = await post("/settings/profiles", d);
+    await loadProfiles();
+    const p = profiles.find(x => x.id === r.saved);
+    msg("Saved <b>" + esc(p.name) + "</b>" + (activate ? " and set as active. <a href='/ui'>Go to inspection →</a>" : "."), "ok");
+    editProfile(r.saved); msg("Saved <b>" + esc(p.name) + "</b>" + (activate ? " and set as active. <a href='/ui'>Go to inspection →</a>" : "."), "ok");
+  } catch (e) { msg("Error: " + esc(e.message), "err"); }
+}
+$("form").onsubmit = e => { e.preventDefault(); save(false); };
+$("saveActBtn").onclick = () => save(true);
+
+$("testBtn").onclick = async () => {
+  const d = formData();
+  if (!d.model_id) { msg("Enter a Model ID first.", "err"); return; }
+  $("testBtn").disabled = true; msg("Testing connection to Roboflow…", "info");
+  try {
+    const r = await post("/settings/test", { id: d.id, model_id: d.model_id, api_key: d.api_key, api_url: d.api_url });
+    showTest(r);
+  } catch (e) { msg("Error: " + esc(e.message), "err"); }
+  finally { $("testBtn").disabled = false; }
+};
+
+function showTest(r) {
+  if (r.ok) msg("✔ Connection works. Model <b>" + esc(r.model_id) + "</b> responded" +
+               (r.resolved_model && r.resolved_model.backend ? " (" + esc(r.resolved_model.backend) + ")" : "") + ".", "ok");
+  else msg("✘ Test failed. " + (r.hint ? "<b>" + esc(r.hint) + "</b><br>" : "") + "<span style='font-size:12px'>" + esc(r.error) + "</span>", "err");
+}
+
+async function testProfile(id, btn) {
+  btn.disabled = true; btn.textContent = "Testing…";
+  try { const r = await post("/settings/test", { id }); editProfile(id); showTest(r); }
+  catch (e) { msg("Error: " + esc(e.message), "err"); }
+  finally { btn.disabled = false; btn.textContent = "Test"; }
+}
+
+async function useProfile(id) {
+  try { await post("/settings/active", { id }); await loadProfiles();
+        msg("Active profile changed. <a href='/ui'>Go to inspection →</a>", "ok"); }
+  catch (e) { msg("Error: " + esc(e.message), "err"); }
+}
+
+async function deleteProfile(id) {
+  const p = profiles.find(x => x.id === id);
+  if (!confirm("Delete profile \"" + p.name + "\"? Saved images are not deleted.")) return;
+  try { await api("/settings/profiles/" + encodeURIComponent(id), { method: "DELETE" }); await loadProfiles();
+        if ($("pid").value === id) resetForm(); }
+  catch (e) { msg("Error: " + esc(e.message), "err"); }
+}
+
+loadProfiles().catch(e => msg("Cannot load settings: " + esc(e.message), "err"));
+updatePreview();
+</script>
+</body>
+</html>
